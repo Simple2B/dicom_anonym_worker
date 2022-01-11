@@ -1,18 +1,69 @@
+import JSZip from "jszip";
 import type { NextPage } from "next";
 import Head from "next/head";
 import Image from "next/image";
+// import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useRef } from "react";
+import { useDropzone } from "react-dropzone";
+import { saveAs } from "file-saver";
 import styles from "../styles/Home.module.css";
 
+enum AnonymizeWorkerCallbackType {
+  progress = "progress",
+  dataAnonymized = "dataAnonymized",
+  success = "success",
+}
+
 const Home: NextPage = () => {
+  const { acceptedFiles, fileRejections, getRootProps, getInputProps } =
+    useDropzone({
+      accept: ".zip",
+    });
+  // Drop zone
+
+  // useEffect(() => {
+  //   if (acceptedFiles && acceptedFiles.length > 0) {
+  //     const temp = cloneDeep(fileList).concat(acceptedFiles);
+  //     setDicomImageList([]);
+  //     setFileList(temp);
+  //   }
+  // }, [
+  //   acceptedFiles,
+  //   fileList,
+  //   statusList,
+  //   successUploadList,
+  //   blobNameList,
+  //   companyEmail,
+  // ]);
+
+  // Worker
+
+  useEffect(() => {
+    if (acceptedFiles.length > 0) {
+      if (workerRef.current) {
+        acceptedFiles.map(
+          (file) =>
+            workerRef.current &&
+            workerRef.current.postMessage({ type: "file", payload: { file } })
+        );
+      }
+    }
+  }, [acceptedFiles]);
+
   const workerRef = useRef<Worker>();
 
   useEffect(() => {
     workerRef.current = new Worker(
       new URL("../workers/anonymiseWorker.worker.ts", import.meta.url)
     );
-    workerRef.current.onmessage = ({ data: { answer } }) => {
-      console.log(answer);
+    workerRef.current.onmessage = ({ data }) => {
+      console.log(data);
+      if (data.type === AnonymizeWorkerCallbackType.success) {
+        // const zip = new JSZip(data.payload.anonymizedZip);
+        saveAs(data.payload.anonymizedZip, "example.zip");
+        // zip.generateAsync({ type: "blob" }).then(function (content) {
+        // });
+      }
     };
     return () => {
       workerRef.current?.terminate();
@@ -41,6 +92,25 @@ const Home: NextPage = () => {
         <h1 className={styles.title}>
           Welcome to <a href="https://nextjs.org">Next.js!</a>
         </h1>
+
+        <div {...getRootProps({ className: "dropzone" })}>
+          <input
+            style={{ borderColor: "tomato", borderWidth: "3px" }}
+            {...getInputProps()}
+          />
+          {/* <h4>{fileRejectionItems}</h4> */}
+          <h4>UPLOAD</h4>
+          <h4>ONE MORE UPLOAD</h4>
+        </div>
+
+        <div className="files">
+          {acceptedFiles.map((file) => (
+            <h5 key={file.name}>
+              {file.name} {file.size}
+            </h5>
+          ))}
+        </div>
+
         <button onClick={handleOnclick}>UPLOAD DICOM</button>
         <p className={styles.description}>
           Get started by editing{" "}
