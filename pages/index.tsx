@@ -57,7 +57,11 @@ const Home: NextPage = () => {
       new URL("../workers/anonymiseWorker.worker.ts", import.meta.url)
     );
     workerRef.current.onmessage = ({ data }) => {
-      console.log(data);
+      if (data.type === AnonymizeWorkerCallbackType.progress) {
+        console.log(data.payload.progress, data.payload.status);
+      } else {
+        console.log(data);
+      }
       if (data.type === AnonymizeWorkerCallbackType.success) {
         // const zip = new JSZip(data.payload.anonymizedZip);
         saveAs(data.payload.anonymizedZip, "example.zip");

@@ -24,12 +24,11 @@ export const anonymizeZip = async (
   const inputZip = new JSZip();
 
   try {
-    const buffer = await zipFile.arrayBuffer();
-    const zipBuf: JSZip = await inputZip.loadAsync(buffer, {
+    const zipBuf: JSZip = await inputZip.loadAsync(zipFile, {
       optimizedBinaryString: true,
     });
 
-    const { files } = zipBuf;
+    const files = { ...zipBuf.files };
 
     let fileNumber = 0;
     for (const key in files) {
@@ -72,14 +71,11 @@ export const anonymizeZip = async (
 
         fileAmount++;
         const data: Uint8Array = await value.async("uint8array");
-        console.log(data);
 
         const anonymizer = new DicomAnonymizer(data);
-        console.log(anonymizer);
 
         try {
           const newData = anonymizer.anonymize();
-          console.log(newData);
 
           const blob = new Blob([newData]);
           writer.write(blob);
@@ -93,11 +89,13 @@ export const anonymizeZip = async (
           }
         }
         progressFiles++;
+        // writer.write(new Blob([data]));
         onProgressCallback(
           (progressFiles / fileNumber) * 100,
           ProgressStatus.IN_PROGRESS
         );
-        writer.write(await value.async("blob"));
+
+        // writer.write(await value.async("blob"));
 
         // errorHandler(key, "file")
       }
